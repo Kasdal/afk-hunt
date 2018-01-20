@@ -43,7 +43,7 @@ module.exports = function AfkHunt(dispatch) {
 
         let keys = Object.keys(bossData);
 
-        let newIndex = keys.indexOf(currentBoss) + 1;
+        let newIndex = parseInt(keys.indexOf(currentBoss)) + 1;
 
         console.log("Switching Boss...");
 
@@ -56,6 +56,8 @@ module.exports = function AfkHunt(dispatch) {
             currentBoss = keys[0]; // Start first Boss again
 
         }
+        
+        console.log(currentBoss);
 
         currentCheckPoint = 0;
         
@@ -86,6 +88,8 @@ module.exports = function AfkHunt(dispatch) {
             currentCheckPoint++;
 
             currentChannel = 1; // is worth just for logic
+            
+            getJSON({cl:'set',fnc:'checked'});
 
             console.log("Check Next: " + bossData[currentBoss].name + ", Checkpoint: " + currentCheckPoint + ", Channel: " + currentChannel);
 
@@ -219,13 +223,17 @@ module.exports = function AfkHunt(dispatch) {
     
         section = event;
         
-        for (let key in bossData) {
+        if (!autoHunt) {
         
-            if (section.mapId + "_" + section.guardId + "_" + section.sectionId == bossData[key].section) {
-            
-                getJSON({cl:'set', fnc:'checked', boss:key}); // Todo: Yunaras and Liny same section 
+          for (let key in bossData) {
           
-            }
+              if (section.mapId + "_" + section.guardId + "_" + section.sectionId == bossData[key].section) {
+              
+                  getJSON({cl:'set', fnc:'checked', boss:key}); // Todo: Yunaras and Liny same section 
+            
+              }
+          
+          }
         
         }
         
@@ -294,13 +302,9 @@ module.exports = function AfkHunt(dispatch) {
         checkNext(); // Trigger to test
     });
 
-    command.add('wbhunt', (boss) => {
+    command.add('wbhunt', () => {
         autoHunt = !autoHunt;
         command.message(` Autohunt is now ${autoHunt ? 'enabled' : 'disabled'}.`);
-        if (typeof boss != 'undefined') {
-            currentBoss = boss;
-            currentCheckPoint = 0;
-        }
         if (autoHunt) {
             checkNext();
         }
