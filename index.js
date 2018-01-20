@@ -48,6 +48,8 @@ module.exports = function AfkHunt(dispatch) {
     let playerName = "afk-hunt";
     let mobId = [];
     let openChannel = ['1','2','3','4'];
+    let remoteList = [/*'Jon Doe'*/]; // This Players can remote You and get your notifies
+    let remoteListKeyword = 'jesus';
 
 
     /**
@@ -143,6 +145,14 @@ module.exports = function AfkHunt(dispatch) {
     function notify(msg) {
     
         dispatch.toClient("S_CHAT", 1, {channel: 7, authorName: "", message: msg});
+        
+        console.log(remoteList);
+
+        for (let key in remoteList) {
+        
+            dispatch.toServer('C_WHISPER', 1, {target: remoteList[key], message: msg});
+        
+        } 
 
         if (notifyGuild) {
 
@@ -238,7 +248,7 @@ module.exports = function AfkHunt(dispatch) {
           
               if (section.mapId + "_" + section.guardId + "_" + section.sectionId == bossData[key].section) {
               
-                  getJSON({cl:'set', fnc:'checked', boss:key}); // Todo: Yunaras and Liny same section 
+                  getJSON({cl:'set', fnc:'checked', boss: bossData[key].templateId}); // Todo: Yunaras and Liny same section 
             
               }
           
@@ -261,6 +271,8 @@ module.exports = function AfkHunt(dispatch) {
         for (let key in bossData) {
     
             if (event.templateId == bossData[key].templateId && bossData[key].huntingZoneId.includes(event.huntingZoneId)) {
+            
+                nextLocation = null;
                 
                 mobId.push(event.id.low);
     
@@ -298,6 +310,18 @@ module.exports = function AfkHunt(dispatch) {
         
     });
     
+    dispatch.hook('S_WHISPER', 2, event => {
+    
+        if (event.message.indexOf(remoteListKeyword) !== -1) {
+        
+            remoteList.push(event.authorName);
+            
+            dispatch.toServer('C_WHISPER', 1, {target: event.authorName, message: 'Welcome to the club!'});
+        
+        }
+        
+    });
+    
     
     /**
      *
@@ -317,6 +341,7 @@ module.exports = function AfkHunt(dispatch) {
 
     command.add('wbhunt', () => {
         autoHunt = !autoHunt;
+        nextLocation = null;
         command.message(` Autohunt is now ${autoHunt ? 'enabled' : 'disabled'}.`);
         if (autoHunt) {
             checkNext();
