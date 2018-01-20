@@ -11,9 +11,9 @@ Requires:
 Functions:
 - AFK Hunting
 - Share found / killed Worldboss in guild chat (use at your own risk)
-- Sync information with Worldboss Timetable (http://moorleiche.com/worldboss/)
+- Sync information with Worldboss Database (Webinterface available soon!)
 - Skip Worldbosses / Channel when on Cooldown
-- Supports EU Servers (For NA/etc just contact me)
+- Supported regions: EU, NA, RU
 - Remote Control (under development)
 
 Commands:
