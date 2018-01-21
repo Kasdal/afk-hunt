@@ -8,27 +8,27 @@ Requires:
 
 Functions:
 - AFK Hunting
-- Share found / killed Worldboss in guild chat (use at your own risk)
+- Share found / killed Worldboss with Player and Guild
 - Sync information with Worldboss Database (Webinterface available soon!)
 - Skip Worldbosses / Channel when on Cooldown
-- Supported regions: EU, NA, RU
+- Supported regions: EU, NA, RU, KR, JP, TW
 - Remote Control (under development)
 
 Commands:
 - wb - Check next Worldboss / Checkpoint / Channel
-- wbhunt - AFK Hunting
-- wbskip - Skip Worldbosses / Channel when on Cooldown
-- wbshare - Share found / killed Worldboss in guild chat (use at your own risk)
-- wbstop - Stops AFK hunt when you found a Worldboss
+- wbhunt - (toggle) AFK Hunting
+- wbdata - Show loaded Worldbosses with index
+- wbskip - (toggle) Skip Worldbosses / Channel when on Cooldown
+- wbshare - (toggle) Share found / killed Worldboss in guild chat (use at your own risk)
+- wbautostop - (toggle) Stops AFK hunt when you found a Worldboss
+- wbremote [playner] - Add Player to notify when u find a Worldboss
+- wbclear - Clear Player list
+- wbgo [wb index] [checkpoint] - instant tp to desired Worldboss / Checkpoint
 
 Known issues:
 - Randomly desyncs with Server
 - If you get in fight at a Checkpoint, the AFK hunt can't proceed
 
 ToDo:
-- Player Remote Control/Info by Whisper Chat
-- Fix Desync
 - Better Checkpoints
 - Auto Kill Mobs and proceed when out of Fight
-- Auto send tax (1 emerald) to one of my Chars on EU Servers, after boss killed :D
-- Auto kill Worldbosses?! x_X
