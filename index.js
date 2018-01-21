@@ -3,7 +3,7 @@ const Request = require('request');
 
 module.exports = function AfkHunt(dispatch) {
 
-    const command = Command(dispatch) // 155503 TC EU
+    const command = Command(dispatch) // 155503
 
     const autoHuntTime = 5; // 5s to Load area data from server
 
@@ -59,6 +59,16 @@ module.exports = function AfkHunt(dispatch) {
      *
      **/
      
+    function addRemotePlayer(name) {
+    
+        if (!remoteList.includes(name)) {
+        
+            remoteList.push(name);  
+        
+        }
+    
+    } 
+    
     function teleport() {
     
         dispatch.toServer('C_PCBANGINVENTORY_USE_SLOT', 1, { slot : 4 });
@@ -202,7 +212,9 @@ module.exports = function AfkHunt(dispatch) {
               let response = JSON.parse(body);
               
               if (typeof response.open != 'undefined' && autoSkip) {
-                  openChannel = response.open;  
+              
+                  openChannel = response.open;
+                    
               }
               
               if (typeof response.wb != 'undefined') {
@@ -231,9 +243,7 @@ module.exports = function AfkHunt(dispatch) {
      *
      **/
      
-    dispatch.hook('C_RETURN_TO_LOBBY', 1, () => {
-		    if (autoHunt) return false // Prevents you from being automatically logged out while AFK
-	  })
+    dispatch.hook('C_RETURN_TO_LOBBY', 1, () => { if (autoHunt) return false })
     
     dispatch.hook('S_LOGIN', 7, (event) => {
         
@@ -317,7 +327,7 @@ module.exports = function AfkHunt(dispatch) {
 
     });
     
-    dispatch.hook('S_DESPAWN_NPC', 1, event => {
+    dispatch.hook('S_DESPAWN_NPC', 1, (event) => {
         
         if (mobId.includes(event.target.low)) {
         
@@ -335,19 +345,19 @@ module.exports = function AfkHunt(dispatch) {
         
     });
     
-    dispatch.hook('S_WHISPER', 2, event => {
+    dispatch.hook('S_WHISPER', 2, (event) => {
     
         if (event.message.indexOf(remoteListKeyword) !== -1) {
         
-            remoteList.push(event.authorName);
-            
+            addRemotePlayer(event.authorName);
+         
             dispatch.toServer('C_WHISPER', 1, {target: event.authorName, message: 'Welcome to the club!'});
         
         }
         
     });
     
-    dispatch.hook('S_USER_STATUS', 1, event => {
+    dispatch.hook('S_USER_STATUS', 1, (event) => {
     
         userStatus = event.status;
         
@@ -358,7 +368,7 @@ module.exports = function AfkHunt(dispatch) {
         
     });
     
-    dispatch.hook('C_CANCEL_SKILL', 1, event => {
+    dispatch.hook('C_CANCEL_SKILL', 1, () => {
     
         if (nextLocation != null) {
             console.log("Stuck protection");
@@ -376,6 +386,16 @@ module.exports = function AfkHunt(dispatch) {
      
     command.add('wb', () => {
         checkNext(); // Trigger to test
+    });
+    
+    command.add('wbremote', (name) => {
+        addRemotePlayer(name);
+        command.message(' ' + name + ' added to remote list.'); 
+    });
+    
+    command.add('wbclear', (authorName) => {
+        remoteList = [];
+        command.message(' remote list is empty now.');
     });
     
     command.add('wbdata', () => {
