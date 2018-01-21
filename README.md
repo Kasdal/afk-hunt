@@ -21,7 +21,7 @@ Commands:
 - wbskip - (toggle) Skip Worldbosses / Channel when on Cooldown
 - wbshare - (toggle) Share found / killed Worldboss in guild chat (use at your own risk)
 - wbautostop - (toggle) Stops AFK hunt when you found a Worldboss
-- wbremote [playner] - Add Player to notify when u find a Worldboss
+- wbremote [player] - Add Player to notify when u find a Worldboss
 - wbclear - Clear Player list
 - wbgo [wb index] [checkpoint] - instant tp to desired Worldboss / Checkpoint
 
