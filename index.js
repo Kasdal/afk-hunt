@@ -49,7 +49,8 @@ module.exports = function AfkHunt(dispatch) {
     let mobId = [];
     let openChannel = ['1','2','3','4'];
     let remoteList = [/*'Jon Doe'*/]; // This Players can remote You and get your notifies
-    let remoteListKeyword = 'jesus';
+    let remoteListKeyword = 'jesus'; // Players who whisper this keyword to you, are added to your remote list
+    let userStatus = 0;
 
 
     /**
@@ -57,7 +58,34 @@ module.exports = function AfkHunt(dispatch) {
      *  FUNCTIONS
      *
      **/
+     
+    function teleport() {
+    
+        dispatch.toServer('C_PCBANGINVENTORY_USE_SLOT', 1, { slot : 4 });
 
+        // Initial timeout for Village List
+        setTimeout( function() { dispatch.toServer('C_TELEPORT_TO_VILLAGE', 1, { id : bossData[currentBoss].villageId }); }, 800);
+
+        currentCheckPoint++;
+
+        currentChannel = 1; // is worth just for logic
+        
+        getJSON({cl:'set',fnc:'checked'});
+
+        console.log("Check Next: " + bossData[currentBoss].name + ", Checkpoint: " + currentCheckPoint + ", Channel: " + currentChannel);
+
+    }
+    
+    function channel() {
+    
+        dispatch.toServer('C_SELECT_CHANNEL', 1, { unk: 1,zone: currentZone,channel: currentChannel - 1 });
+                
+        getJSON({cl:'set',fnc:'checked'});
+                
+        console.log("Check Next: " + bossData[currentBoss].name + ", Checkpoint: " + currentCheckPoint + ", Channel: " + currentChannel);
+    
+    }
+     
     function nextBoss() {
 
         currentBoss++;
@@ -79,8 +107,26 @@ module.exports = function AfkHunt(dispatch) {
     }
     
     function checkNext() {
+    
+        if (openChannel.length == 0) {
         
-        if ((currentChannel >= bossData[currentBoss].channel || currentCheckPoint == 0) && openChannel.length > 0) {
+            nextBoss();
+            return;    
+        
+        }
+        
+        if (userStatus == 1 || (mobId.length != 0 && autoStop)) {
+        
+            // Wait if in fight or until found boss gets killed
+            setTimeout( function() { checkNext(); }, 5000);
+            
+            console.log("In fight or Boss still here...");
+            
+            return;       
+        
+        }
+        
+        if ((currentChannel >= bossData[currentBoss].channel || currentCheckPoint == 0)) {
 
             if (bossData[currentBoss]['checkPoints'].length <= currentCheckPoint) {
 
@@ -91,18 +137,7 @@ module.exports = function AfkHunt(dispatch) {
             
             nextLocation = bossData[currentBoss]['checkPoints'][currentCheckPoint];
 
-            dispatch.toServer('C_PCBANGINVENTORY_USE_SLOT', 1, { slot : 4 });
-
-            // Initial timeout for Village List
-            setTimeout( function() { dispatch.toServer('C_TELEPORT_TO_VILLAGE', 1, { id : bossData[currentBoss].villageId }); }, 800);
-
-            currentCheckPoint++;
-
-            currentChannel = 1; // is worth just for logic
-            
-            getJSON({cl:'set',fnc:'checked'});
-
-            console.log("Check Next: " + bossData[currentBoss].name + ", Checkpoint: " + currentCheckPoint + ", Channel: " + currentChannel);
+            teleport();
 
             return;
 
@@ -110,26 +145,14 @@ module.exports = function AfkHunt(dispatch) {
  
             currentChannel++;
             
-            if (bossData[currentBoss]['checkPoints'].length >= currentCheckPoint && openChannel.length > 0) {
+            if (bossData[currentBoss]['checkPoints'].length >= currentCheckPoint) {
 
                 if (!openChannel.includes(currentChannel.toString())) {
                     checkNext();
                     return;
                 }
-                
-                getJSON({cl:'set',fnc:'checked'});
-                
-                currentChannel--; 
-                
-                dispatch.toServer('C_SELECT_CHANNEL', 1, {
-                    unk: 1,
-                    zone: currentZone,
-                    channel: currentChannel,
-                });
-                
-                currentChannel++;
-                
-                console.log("Check Next: " + bossData[currentBoss].name + ", Checkpoint: " + currentCheckPoint + ", Channel: " + currentChannel);
+
+                channel();
                 
                 return;
 
@@ -207,6 +230,10 @@ module.exports = function AfkHunt(dispatch) {
      *  HOOKS
      *
      **/
+     
+    dispatch.hook('C_RETURN_TO_LOBBY', 1, () => {
+		    if (autoHunt) return false // Prevents you from being automatically logged out while AFK
+	  })
     
     dispatch.hook('S_LOGIN', 7, (event) => {
         
@@ -276,11 +303,9 @@ module.exports = function AfkHunt(dispatch) {
                 
                 mobId.push(event.id.low);
     
-                if (autoStop) { autoHunt = false; }
-    
                 let param = "3#####" + section.mapId + "_" + section.guardId + "_" + section.sectionId + "@" + bossData[key].zone + "@" + event.x + ","  + event.y + "," + event.z;
     
-                let msg = "<FONT>World Boss found! </FONT><FONT FACE=\"$ChatFont\" SIZE=\"18\" COLOR=\"#00E114\" KERNING=\"0\"><ChatLinkAction param=\""+param+"\">&lt;Point of Interest&gt;</ChatLinkAction></FONT><FONT> " + bossData[key].name + " @ Channel " + currentChannel + "</FONT>";
+                let msg = "<FONT>World Boss found! </FONT><FONT FACE=\"$ChatFont\" SIZE=\"18\" COLOR=\"#00E114\" KERNING=\"0\"><ChatLinkAction param=\""+param+"\">&lt;Point of Interest&gt;</ChatLinkAction></FONT><FONT> " + bossData[key].name + " @ Channel " + currentChannel + " (wbgo " + key + " " + (currentCheckpoint + 1) + ")</FONT>";
     
                 notify(msg);
     
@@ -322,7 +347,27 @@ module.exports = function AfkHunt(dispatch) {
         
     });
     
+    dispatch.hook('S_USER_STATUS', 1, event => {
     
+        userStatus = event.status;
+        
+        if (nextLocation != null && event.status == 1) {
+            console.log("Stuck protection");
+            nextLocation = null; // Stuck protection 
+        }       
+        
+    });
+    
+    dispatch.hook('C_CANCEL_SKILL', 1, event => {
+    
+        if (nextLocation != null) {
+            console.log("Stuck protection");
+            nextLocation = null; // Stuck protection 
+        }     
+        
+    });
+    
+
     /**
      *
      *  COMMANDS
@@ -358,23 +403,23 @@ module.exports = function AfkHunt(dispatch) {
         command.message(` Autostop is now ${autoStop ? 'enabled' : 'disabled'}.`);
     });
     
-    command.add('wbnext', (newIndex) => {
+    command.add('wbgo', (newIndex, newCheckpoint) => {
+    
+        if (typeof newIndex == 'undefined') { newIndex = 0; }
+        
+        if (typeof newCheckpoint == 'undefined') { newCheckpoint = 0; }
     
         currentBoss = parseInt(newIndex);
-
-        if (bossData.length <= currentBoss) {
-
-            currentBoss = 0; // Start first Boss again
-
-        }
-
-        currentCheckPoint = 0;
         
-        command.message(' Next boss will be: ' + bossData[currentBoss].name);
-
-        currentCheckPoint = 0;
+        currentCheckpoint = parseInt(newCheckpoint);
         
-        getJSON({cl:'get',fnc:'open'}); // Preload Boss Info
+        if (bossData.length <= currentBoss) { currentBoss = 0; }
+
+        if (bossData[currentBoss]['checkPoints'].length <= currentCheckPoint) { currentCheckPoint = 0;}
+            
+        nextLocation = bossData[currentBoss]['checkPoints'][currentCheckPoint];
+        
+        teleport();
         
     });
 
