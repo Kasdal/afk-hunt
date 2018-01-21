@@ -25,7 +25,7 @@ Commands:
 - wbclear - Clear Player list
 - wbgo [wb index] [checkpoint] - instant tp to desired Worldboss / Checkpoint
 
-Webinterface (Limited Access only)
+Webinterface: (Limited Access only)
 
 ![https://ibb.co/e3fgKG](https://thumb.ibb.co/e3fgKG/afk_hunt_webinterface.png)
 
