@@ -315,7 +315,7 @@ module.exports = function AfkHunt(dispatch) {
     
                 let param = "3#####" + section.mapId + "_" + section.guardId + "_" + section.sectionId + "@" + bossData[key].zone + "@" + event.x + ","  + event.y + "," + event.z;
     
-                let msg = "<FONT>World Boss found! </FONT><FONT FACE=\"$ChatFont\" SIZE=\"18\" COLOR=\"#00E114\" KERNING=\"0\"><ChatLinkAction param=\""+param+"\">&lt;Point of Interest&gt;</ChatLinkAction></FONT><FONT> " + bossData[key].name + " @ Channel " + currentChannel + " (wbgo " + key + " " + (currentCheckpoint + 1) + ")</FONT>";
+                let msg = "<FONT>World Boss found! </FONT><FONT FACE=\"$ChatFont\" SIZE=\"18\" COLOR=\"#00E114\" KERNING=\"0\"><ChatLinkAction param=\""+param+"\">&lt;Point of Interest&gt;</ChatLinkAction></FONT><FONT> " + bossData[key].name + " @ Channel " + currentChannel + " (wbgo " + key + " " + (currentCheckPoint + 1) + ")</FONT>";
     
                 notify(msg);
     
@@ -431,7 +431,7 @@ module.exports = function AfkHunt(dispatch) {
     
         currentBoss = parseInt(newIndex);
         
-        currentCheckpoint = parseInt(newCheckpoint);
+        currentCheckPoint = parseInt(newCheckpoint);
         
         if (bossData.length <= currentBoss) { currentBoss = 0; }
 
