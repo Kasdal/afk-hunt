@@ -2,6 +2,7 @@
 tera-proxy module to afk hunt worldbosses!
 
 Requires:
+- For EU Players: copy protocol.326440.map into tera-data/map/
 - https://github.com/pinkipi/command
 - https://github.com/request/request
 - TERA Elite (For AFK Hunting)
