@@ -71,6 +71,8 @@ module.exports = function AfkHunt(dispatch) {
     
     function teleport() {
     
+        mobId = [];
+    
         dispatch.toServer('C_PCBANGINVENTORY_USE_SLOT', 1, { slot : 4 });
 
         // Initial timeout for Village List
@@ -87,6 +89,8 @@ module.exports = function AfkHunt(dispatch) {
     }
     
     function channel() {
+    
+        mobId = [];
     
         dispatch.toServer('C_SELECT_CHANNEL', 1, { unk: 1,zone: currentZone,channel: currentChannel - 1 });
                 
@@ -273,6 +277,7 @@ module.exports = function AfkHunt(dispatch) {
     dispatch.hook('S_CURRENT_CHANNEL', 1, (event) => {
         currentChannel = event.channel; // 1-4
         currentZone = event.zone;
+        getJSON({cl:'get',fnc:'open'}); // Preload Boss Info
     });
     
     dispatch.hook('S_VISIT_NEW_SECTION', (event) => {
@@ -309,13 +314,15 @@ module.exports = function AfkHunt(dispatch) {
     
             if (event.templateId == bossData[key].templateId && bossData[key].huntingZoneId.includes(event.huntingZoneId)) {
             
+                currentBoss = key;
+            
                 nextLocation = null;
                 
                 mobId.push(event.id.low);
     
                 let param = "3#####" + section.mapId + "_" + section.guardId + "_" + section.sectionId + "@" + bossData[key].zone + "@" + event.x + ","  + event.y + "," + event.z;
     
-                let msg = "<FONT>World Boss found! </FONT><FONT FACE=\"$ChatFont\" SIZE=\"18\" COLOR=\"#00E114\" KERNING=\"0\"><ChatLinkAction param=\""+param+"\">&lt;Point of Interest&gt;</ChatLinkAction></FONT><FONT> " + bossData[key].name + " @ Channel " + currentChannel + " (wbgo " + key + " " + (currentCheckPoint + 1) + ")</FONT>";
+                let msg = "<FONT>World Boss found! </FONT><FONT FACE=\"$ChatFont\" SIZE=\"18\" COLOR=\"#00E114\" KERNING=\"0\"><ChatLinkAction param=\""+param+"\">&lt;Point of Interest.&gt;</ChatLinkAction></FONT><FONT> " + bossData[key].name + " @ Channel " + currentChannel + "</FONT>";
     
                 notify(msg);
     
@@ -403,7 +410,13 @@ module.exports = function AfkHunt(dispatch) {
             command.message(' ' + key + ' - ' + bossData[key].name); 
         } 
     });
-
+    
+    command.add('wbtable', () => {
+      dispatch.toClient("S_SHOW_AWESOMIUMWEB_SHOP", 1, {
+  			link: 'http://moorleiche.com/worldboss/v2/ingame.php?server='+serverId+'&player='+playerName+'&player_id=' + playerId
+  		});
+    });
+    
     command.add('wbhunt', () => {
         autoHunt = !autoHunt;
         nextLocation = null;
@@ -415,6 +428,7 @@ module.exports = function AfkHunt(dispatch) {
     
     command.add('wbskip', () => {
         autoSkip = !autoSkip;
+        if (!autoSkip) { openChannel = ['1','2','3','4']; }
         command.message(` Autoskip Channel is now ${autoSkip ? 'enabled' : 'disabled'}.`);
     });
 
