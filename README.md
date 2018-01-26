@@ -18,7 +18,8 @@ Functions:
 Commands:
 - wb - Check next Worldboss / Checkpoint / Channel
 - wbhunt - (toggle) AFK Hunting
-- wbtable - *NEW* get Worldboss Information of current Server
+- wbtable - **NEW** get Worldboss Information of current Server
+![https://ibb.co/gUaeUG](https://preview.ibb.co/foG8Ob/wbtable.jpg)
 - wbdata - Show loaded Worldbosses with index
 - wbskip - (toggle) Skip Worldbosses / Channel when on Cooldown
 - wbshare - (toggle) Share found / killed Worldboss in guild chat (use at your own risk)
