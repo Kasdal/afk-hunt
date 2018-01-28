@@ -4,8 +4,9 @@ const Request = require('request');
 module.exports = function AfkHunt(dispatch) {
 
     const command = Command(dispatch) // 155503
-
-    const autoHuntTime = 5; // 5s to Load area data from server
+    
+    const autoHuntTime = 3; // 3s to Load area data from server
+    const lootTime = 90; // 90s to loot until autohunt proceed
 
 
     /**
@@ -51,6 +52,7 @@ module.exports = function AfkHunt(dispatch) {
     let remoteList = [/*'Jon Doe'*/]; // This Players can remote You and get your notifies
     let remoteListKeyword = 'jesus'; // Players who whisper this keyword to you, are added to your remote list
     let userStatus = 0;
+    let skipBossIndex = [];
 
 
     /**
@@ -123,21 +125,24 @@ module.exports = function AfkHunt(dispatch) {
     function checkNext() {
     
         if (openChannel.length == 0) {
-        
             nextBoss();
             return;    
-        
         }
         
-        if (userStatus == 1 || (mobId.length != 0 && autoStop)) {
+        if (skipBossIndex.indexOf(currentBoss) !== -1) {
+            nextBoss();
+            return;
+        }
         
-            // Wait if in fight or until found boss gets killed
+        if (userStatus == 1 ) {
+            // Wait if in fight 
             setTimeout( function() { checkNext(); }, 5000);
-            
-            console.log("In fight or Boss still here...");
-            
+            console.log("In fight...");
             return;       
-        
+        }
+
+        if (mobId.length != 0 && autoStop) {
+            return;       
         }
         
         if ((currentChannel >= bossData[currentBoss].channel || currentCheckPoint == 0)) {
@@ -346,6 +351,12 @@ module.exports = function AfkHunt(dispatch) {
               
               getJSON({cl:'set',fnc:'killed'});
               
+              if (autoStop && autoHunt) {
+                  // Wait until found boss gets killed
+                  setTimeout( function() { checkNext(); }, lootTime * 1000);
+                  console.log("You have "+lootTime+"s to loot...");  
+              }
+              
               return;  
 
         }
@@ -428,7 +439,7 @@ module.exports = function AfkHunt(dispatch) {
     
     command.add('wbskip', () => {
         autoSkip = !autoSkip;
-        if (!autoSkip) { openChannel = ['1','2','3','4']; }
+        if (!autoSkip) { openChannel = ['1','2','3','4','5','6','7','8','9','10']; }
         command.message(` Autoskip Channel is now ${autoSkip ? 'enabled' : 'disabled'}.`);
     });
 
@@ -455,6 +466,19 @@ module.exports = function AfkHunt(dispatch) {
         
         teleport();
         
+    });
+    
+    command.add('wbskipboss', (index) => {
+        if (typeof index == 'undefined') { return; }
+        skipBossIndex.push(parseInt(index));
+        command.message(' ' + bossData[parseInt(index)]['name'] + ' added to skip list.'); 
+    });
+    
+    command.add('wbreset', () => {
+        remoteList = [];
+        skipBossIndex = [];
+        openChannel = ['1','2','3','4','5','6','7','8','9','10'];
+        command.message(' default settings restored.'); 
     });
 
     command.add('wbshare', () => {
