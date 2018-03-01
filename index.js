@@ -5,8 +5,9 @@ module.exports = function AfkHunt(dispatch) {
 
     const command = Command(dispatch) // 155503
     
-    const autoHuntTime = 3; // 3s to Load area data from server
     const lootTime = 90; // 90s to loot until autohunt proceed
+    
+    const TRIGGER_ITEM = 200930; // http://teradatabase.net/us/item/200930/
 
 
     /**
@@ -32,6 +33,7 @@ module.exports = function AfkHunt(dispatch) {
         ] 
       }*/
     ];
+    let autoHuntTime = 4; // 4s to Load area data from server
     let bossData = [];
     let nextLocation = null;
     let cid = null;
@@ -39,20 +41,22 @@ module.exports = function AfkHunt(dispatch) {
     let currentCheckPoint = 0;
     let currentChannel = 0;
     let currentZone = -1;
-    let currentBoss = 0; // Start Boss Index
+    let currentBoss = -1; // Start Boss Index
     let notifyGuild = false; // Message Guildies when WB found
     let autoHunt = false;
     let autoStop = true; // Stops autohunt when Worldboss found!
-    let autoSkip = false; // Skip Channels where Wbs on CD
+    let autoSkip = true; // Skip Channels where Wbs on CD
     let serverId = 0;
     let playerId = 0;
     let playerName = "afk-hunt";
-    let mobId = [];
-    let openChannel = ['1','2','3','4','5','6','7','8','9','10']; // Nyx Hotfix
+    let mob = 0;
+    let openChannel = []; // Nyx Hotfix
+    let checkedChannel = []; // Hunt if in Party
     let remoteList = [/*'Jon Doe'*/]; // This Players can remote You and get your notifies
-    let remoteListKeyword = 'jesus'; // Players who whisper this keyword to you, are added to your remote list
+    let remoteListKeyword = 'notjesus'; // Players who whisper this keyword to you, are added to your remote list
     let userStatus = 0;
     let skipBossIndex = [];
+    let letMeLoot = null;
 
 
     /**
@@ -69,11 +73,13 @@ module.exports = function AfkHunt(dispatch) {
         
         }
     
-    } 
+    }
     
     function teleport() {
     
-        mobId = [];
+        mob = 0;
+        
+        checkedChannel = [];
     
         dispatch.toServer('C_PCBANGINVENTORY_USE_SLOT', 1, { slot : 4 });
 
@@ -81,32 +87,95 @@ module.exports = function AfkHunt(dispatch) {
         setTimeout( function() { dispatch.toServer('C_TELEPORT_TO_VILLAGE', 1, { id : bossData[currentBoss].villageId }); }, 800);
 
         currentCheckPoint++;
-
-        currentChannel = 1; // is worth just for logic
         
         getJSON({cl:'set',fnc:'checked'});
 
-        console.log("Check Next: " + bossData[currentBoss].name + ", Checkpoint: " + currentCheckPoint + ", Channel: " + currentChannel);
+        console.log("Check Next: " + bossData[currentBoss].name + ", Checkpoint: " + currentCheckPoint + ", Channel: ?");
+        command.message(" Check Next: " + bossData[currentBoss].name + ", Checkpoint: " + currentCheckPoint + ", Channel: ?"); 
 
     }
     
     function channel() {
     
-        mobId = [];
+        mob = 0;
     
         dispatch.toServer('C_SELECT_CHANNEL', 1, { unk: 1,zone: currentZone,channel: currentChannel - 1 });
                 
         getJSON({cl:'set',fnc:'checked'});
                 
         console.log("Check Next: " + bossData[currentBoss].name + ", Checkpoint: " + currentCheckPoint + ", Channel: " + currentChannel);
+        command.message(" Check Next: " + bossData[currentBoss].name + ", Checkpoint: " + currentCheckPoint + ", Channel: " + currentChannel);
+    
+    }
+    
+    function nextChannel() {
+    
+        /*console.log("Checked Channel:");
+        console.log(checkedChannel);
+        console.log("Open Channel:");
+        console.log(openChannel);
+        console.log("My Zone:");
+        console.log(currentZone);
+        console.log("Boss Zone:");
+        console.log(bossData[currentBoss].zone);*/
+    
+        if (currentZone == bossData[currentBoss].zone) {
+        
+          for (let key in openChannel) {
+            
+              if (!checkedChannel.includes(openChannel[key])) {
+                
+                  currentChannel = parseInt(openChannel[key]);
+                    
+                  //console.log("Going Channel " + currentChannel + "...");
+                    
+                  channel();
+                    
+                  return;
+                
+              }   
+            
+          }
+        
+        }
+        
+        lastChannel = null;
+        
+        checkedChannel = [];
+        
+        nextCheckPoint();
+    
+    }
+    
+    function nextCheckPoint() {
+    
+      if (bossData[currentBoss]['checkPoints'].length > currentCheckPoint) {
+
+          nextLocation = bossData[currentBoss]['checkPoints'][currentCheckPoint];
+          
+          //console.log("Going Checkpoint " + currentCheckPoint + "...");
+    
+          teleport();
+          
+          return;
+
+      }
+
+      nextBoss();
     
     }
      
     function nextBoss() {
 
         currentBoss++;
-
+        
         console.log("Switching Boss...");
+        command.message(" Switching Boss...");
+        
+        if (skipBossIndex.indexOf(currentBoss) !== -1) {
+            nextBoss();
+            return;
+        }
 
         if (bossData.length <= currentBoss) {
 
@@ -116,6 +185,18 @@ module.exports = function AfkHunt(dispatch) {
 
         currentCheckPoint = 0;
         
+        currentZone = -1;
+        
+        checkedChannel = [];
+        
+        openChannel = [];
+        
+        for (let x = 1; x < bossData[currentBoss].channel; x++) {
+        
+            openChannel.push(x.toString()); 
+        
+        }
+        
         getJSON({cl:'get',fnc:'open'}); // Preload Boss Info
         
         setTimeout( function() { checkNext(); }, 2000);
@@ -124,13 +205,21 @@ module.exports = function AfkHunt(dispatch) {
     
     function checkNext() {
     
+        clearTimeout(letMeLoot);
+    
+        if (currentBoss == -1) {
+            // Skip Boss on first Use
+            nextBoss();
+            return;   
+        }
+        
         if (openChannel.length == 0) {
+            // Skip Boss when no Channel Open
             nextBoss();
             return;    
         }
-        
-        if (skipBossIndex.indexOf(currentBoss) !== -1) {
-            nextBoss();
+    
+        if (mob != 0  && autoStop) {
             return;
         }
         
@@ -141,54 +230,18 @@ module.exports = function AfkHunt(dispatch) {
             return;       
         }
 
-        if (mobId.length != 0 && autoStop) {
-            return;       
-        }
+        wb = 0;
         
-        if ((currentChannel >= bossData[currentBoss].channel || currentCheckPoint == 0)) {
-
-            if (bossData[currentBoss]['checkPoints'].length <= currentCheckPoint) {
-
-                nextBoss();
-                return;
-
-            }
-            
-            nextLocation = bossData[currentBoss]['checkPoints'][currentCheckPoint];
-
-            teleport();
-
-            return;
-
-        } else {
- 
-            currentChannel++;
-            
-            if (bossData[currentBoss]['checkPoints'].length >= currentCheckPoint) {
-
-                if (!openChannel.includes(currentChannel.toString())) {
-                    checkNext();
-                    return;
-                }
-
-                channel();
-                
-                return;
-
-            }
-
-            nextBoss();
-            return;
-
-        }
+        nextChannel(); 
     
     }
     
     function notify(msg) {
     
         dispatch.toClient("S_CHAT", 1, {channel: 7, authorName: "", message: msg});
+        command.message(" " + msg); 
         
-        console.log(remoteList);
+        //console.log(remoteList);
 
         for (let key in remoteList) {
         
@@ -273,16 +326,26 @@ module.exports = function AfkHunt(dispatch) {
 
     dispatch.hook('S_SPAWN_ME', (event) => {
         if (nextLocation != null) {
+            
             Object.assign(event, nextLocation);
             nextLocation = null;
+            
+            getJSON({cl:'get',fnc:'open'}); // Initial Load boss info
+        
             return true;
         }
     });
     
     dispatch.hook('S_CURRENT_CHANNEL', 1, (event) => {
+        
         currentChannel = event.channel; // 1-4
+        
+        checkedChannel.push(currentChannel.toString());
+        
         currentZone = event.zone;
+        
         getJSON({cl:'get',fnc:'open'}); // Preload Boss Info
+        
     });
     
     dispatch.hook('S_VISIT_NEW_SECTION', (event) => {
@@ -310,7 +373,7 @@ module.exports = function AfkHunt(dispatch) {
                 checkNext();
             }
         }, autoHuntTime * 1000);
-        
+          
     });
 
     dispatch.hook('S_SPAWN_NPC', 3, (event) => {
@@ -323,12 +386,20 @@ module.exports = function AfkHunt(dispatch) {
             
                 nextLocation = null;
                 
-                mobId.push(event.id.low);
+                mob = event.id.low;
     
-                let param = "3#####" + section.mapId + "_" + section.guardId + "_" + section.sectionId + "@" + bossData[key].zone + "@" + event.x + ","  + event.y + "," + event.z;
+                if (section != null) {
     
-                let msg = "<FONT>World Boss found! </FONT><FONT FACE=\"$ChatFont\" SIZE=\"18\" COLOR=\"#00E114\" KERNING=\"0\"><ChatLinkAction param=\""+param+"\">&lt;Point of Interest.&gt;</ChatLinkAction></FONT><FONT> " + bossData[key].name + " @ Channel " + currentChannel + "</FONT>";
-    
+                  let param = "3#####" + section.mapId + "_" + section.guardId + "_" + section.sectionId + "@" + bossData[key].zone + "@" + event.x + ","  + event.y + "," + event.z;
+
+                  let msg = "<FONT>World Boss found! </FONT><FONT FACE=\"$ChatFont\" SIZE=\"18\" COLOR=\"#00E114\" KERNING=\"0\"><ChatLinkAction param=\""+param+"\">&lt;Point of Interest.&gt;</ChatLinkAction></FONT><FONT> " + bossData[key].name + " @ Channel " + currentChannel + "</FONT>";
+
+                } else {
+                
+                  let msg = "<FONT>World Boss found! " + bossData[key].name + " @ Channel " + currentChannel + "</FONT>";
+                
+                }
+                
                 notify(msg);
     
                 getJSON({cl:'set',fnc:'spotted',boss:event.templateId});
@@ -341,20 +412,21 @@ module.exports = function AfkHunt(dispatch) {
     
     dispatch.hook('S_DESPAWN_NPC', 1, (event) => {
         
-        if (mobId.includes(event.target.low)) {
+        if (mob == event.target.low) {
         
               let msg = "<FONT>World Boss killed! " + bossData[currentBoss].name + " @ Channel " + currentChannel + "</FONT>";
 
               notify(msg);
               
-              mobId.splice(mobId.indexOf(event.target.low), 1);
+              mob = 0;
               
               getJSON({cl:'set',fnc:'killed'});
               
               if (autoStop && autoHunt) {
                   // Wait until found boss gets killed
-                  setTimeout( function() { checkNext(); }, lootTime * 1000);
-                  console.log("You have "+lootTime+"s to loot...");  
+                  letMeLoot = setTimeout( function() { checkNext(); }, lootTime * 1000);
+                  console.log("You have "+lootTime+"s to loot...");
+                  command.message(" You have "+lootTime+"s to loot..."); 
               }
               
               return;  
@@ -395,6 +467,18 @@ module.exports = function AfkHunt(dispatch) {
         
     });
     
+    dispatch.hook('C_USE_ITEM', 1, event => {
+  		  if (event.item === TRIGGER_ITEM) {
+  			    autoHunt = !autoHunt;
+            nextLocation = null;
+            command.message(` Autohunt is now ${autoHunt ? 'enabled' : 'disabled'}.`);
+            if (autoHunt) {
+                checkNext();
+            }
+            return
+  		  }
+  	});
+    
 
     /**
      *
@@ -411,11 +495,6 @@ module.exports = function AfkHunt(dispatch) {
         command.message(' ' + name + ' added to remote list.'); 
     });
     
-    command.add('wbclear', (authorName) => {
-        remoteList = [];
-        command.message(' remote list is empty now.');
-    });
-    
     command.add('wbdata', () => {
         for (let key in bossData) {
             command.message(' ' + key + ' - ' + bossData[key].name); 
@@ -423,9 +502,9 @@ module.exports = function AfkHunt(dispatch) {
     });
     
     command.add('wbtable', () => {
-      dispatch.toClient("S_SHOW_AWESOMIUMWEB_SHOP", 1, {
-  			link: 'http://moorleiche.com/worldboss/v2/ingame.php?server='+serverId+'&player='+playerName+'&player_id=' + playerId
-  		});
+        dispatch.toClient("S_SHOW_AWESOMIUMWEB_SHOP", 1, {
+  			   link: 'http://moorleiche.com/worldboss/v2/ingame.php?server='+serverId+'&player='+playerName+'&player_id=' + playerId
+  		  });
     });
     
     command.add('wbhunt', () => {
@@ -439,7 +518,6 @@ module.exports = function AfkHunt(dispatch) {
     
     command.add('wbskip', () => {
         autoSkip = !autoSkip;
-        if (!autoSkip) { openChannel = ['1','2','3','4','5','6','7','8','9','10']; }
         command.message(` Autoskip Channel is now ${autoSkip ? 'enabled' : 'disabled'}.`);
     });
 
@@ -474,10 +552,16 @@ module.exports = function AfkHunt(dispatch) {
         command.message(' ' + bossData[parseInt(index)]['name'] + ' added to skip list.'); 
     });
     
+    command.add('wbtimer', (value) => {
+        if (typeof value == 'undefined') { return; }
+        autoHuntTime = value;
+        command.message(' Next Timer is now ' + value + ' seconds.'); 
+    });
+    
     command.add('wbreset', () => {
         remoteList = [];
         skipBossIndex = [];
-        openChannel = ['1','2','3','4','5','6','7','8','9','10'];
+        openChannel = [];
         command.message(' default settings restored.'); 
     });
 
