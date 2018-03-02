@@ -387,19 +387,21 @@ module.exports = function AfkHunt(dispatch) {
                 nextLocation = null;
                 
                 mob = event.id.low;
-    
+                
+                //console.log(section);
+                //console.log(bossData[key]);
+                //console.log(currentChannel);
+                
+                let param = "3#####" + bossData[key].section + "@" + bossData[key].zone + "@" + event.x + ","  + event.y + "," + event.z;
+                
                 if (section != null) {
     
-                  let param = "3#####" + section.mapId + "_" + section.guardId + "_" + section.sectionId + "@" + bossData[key].zone + "@" + event.x + ","  + event.y + "," + event.z;
+                  param = "3#####" + section.mapId + "_" + section.guardId + "_" + section.sectionId + "@" + bossData[key].zone + "@" + event.x + ","  + event.y + "," + event.z;
 
-                  let msg = "<FONT>World Boss found! </FONT><FONT FACE=\"$ChatFont\" SIZE=\"18\" COLOR=\"#00E114\" KERNING=\"0\"><ChatLinkAction param=\""+param+"\">&lt;Point of Interest.&gt;</ChatLinkAction></FONT><FONT> " + bossData[key].name + " @ Channel " + currentChannel + "</FONT>";
-
-                } else {
-                
-                  let msg = "<FONT>World Boss found! " + bossData[key].name + " @ Channel " + currentChannel + "</FONT>";
-                
                 }
                 
+                msg = "<FONT>World Boss found! </FONT><FONT FACE=\"$ChatFont\" SIZE=\"18\" COLOR=\"#00E114\" KERNING=\"0\"><ChatLinkAction param=\""+param+"\">&lt;Point of Interest.&gt;</ChatLinkAction></FONT><FONT> " + bossData[key].name + " @ Channel " + currentChannel + "</FONT>";
+
                 notify(msg);
     
                 getJSON({cl:'set',fnc:'spotted',boss:event.templateId});
@@ -475,7 +477,7 @@ module.exports = function AfkHunt(dispatch) {
             if (autoHunt) {
                 checkNext();
             }
-            return
+            return false;
   		  }
   	});
     
