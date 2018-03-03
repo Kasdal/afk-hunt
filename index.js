@@ -110,6 +110,9 @@ module.exports = function AfkHunt(dispatch) {
     
     function nextChannel() {
     
+        console.log(openChannel.join(", ") + " Open");
+        console.log(checkedChannel.join(", ") + " Checked");
+    
         /*console.log("Checked Channel:");
         console.log(checkedChannel);
         console.log("Open Channel:");
@@ -191,7 +194,7 @@ module.exports = function AfkHunt(dispatch) {
         
         openChannel = [];
         
-        for (let x = 1; x < bossData[currentBoss].channel; x++) {
+        for (let x = 1; x <= bossData[currentBoss].channel; x++) {
         
             openChannel.push(x.toString()); 
         
@@ -206,6 +209,14 @@ module.exports = function AfkHunt(dispatch) {
     function checkNext() {
     
         clearTimeout(letMeLoot);
+        
+        let channelString = currentChannel.toString();
+
+        if (!checkedChannel.includes(channelString)) {
+        
+            checkedChannel.push(channelString);
+        
+        }
     
         if (currentBoss == -1) {
             // Skip Boss on first Use
@@ -231,7 +242,7 @@ module.exports = function AfkHunt(dispatch) {
         }
 
         wb = 0;
-        
+
         nextChannel(); 
     
     }
@@ -339,9 +350,7 @@ module.exports = function AfkHunt(dispatch) {
     dispatch.hook('S_CURRENT_CHANNEL', 1, (event) => {
         
         currentChannel = event.channel; // 1-4
-        
-        checkedChannel.push(currentChannel.toString());
-        
+
         currentZone = event.zone;
         
         getJSON({cl:'get',fnc:'open'}); // Preload Boss Info
@@ -489,6 +498,7 @@ module.exports = function AfkHunt(dispatch) {
      **/
      
     command.add('wb', () => {
+        mob = 0; // ignore boss
         checkNext(); // Trigger to test
     });
     
@@ -561,6 +571,7 @@ module.exports = function AfkHunt(dispatch) {
     });
     
     command.add('wbreset', () => {
+        mob = 0; // ignore boss
         remoteList = [];
         skipBossIndex = [];
         openChannel = [];
